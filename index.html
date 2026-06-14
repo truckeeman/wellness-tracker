@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Wellness" />
+  <meta name="theme-color" content="#4A7C6F" />
+  <title>Wellness Tracker</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <style>
+    :root {
+      --bg: #F7F5F0;
+      --surface: #FFFFFF;
+      --border: #E5E0D8;
+      --accent: #4A7C6F;
+      --accent-light: #EAF2F0;
+      --accent-text: #2D5C52;
+      --ned: #4A7C6F;
+      --ned-light: #EAF2F0;
+      --judi: #8B5E8A;
+      --judi-light: #F5EFF5;
+      --text: #1A1A1A;
+      --text-sec: #6B6560;
+      --text-ter: #9E9890;
+      --red: #C0392B;
+      --red-light: #FDEDEC;
+      --green: #27AE60;
+      --green-light: #EAFAF1;
+      --warn: #C8833A;
+      --warn-light: #FDF3E7;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: var(--text); font-size: 16px; }
+    #app { height: 100%; display: flex; flex-direction: column; max-width: 680px; margin: 0 auto; }
+
+    /* Header */
+    .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: calc(12px + var(--safe-top)) 18px 0; position: sticky; top: 0; z-index: 100; }
+    .header-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+    .header-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-date { font-size: 13px; color: var(--text-ter); }
+    .tabs { display: flex; }
+    .tab { flex: 1; padding: 10px 0; background: none; border: none; border-bottom: 2px solid transparent; font-size: 15px; font-weight: 500; color: var(--text-sec); cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+    .tab.active-ned { color: var(--ned); border-color: var(--ned); }
+    .tab.active-judi { color: var(--judi); border-color: var(--judi); }
+    .tab.active-week { color: var(--accent); border-color: var(--accent); }
+    .tab.active-ex-ned { color: var(--ned); border-color: var(--ned); }
+    .tab.active-ex-judi { color: var(--judi); border-color: var(--judi); }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; padding: 16px 16px calc(24px + var(--safe-bottom)); }
+
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+    .card-accent-ned { border-left: 3px solid var(--ned); }
+    .card-accent-judi { border-left: 3px solid var(--judi); }
+    .card-accent-warn { border-left: 3px solid var(--warn); }
+    .card-accent-green { border-left: 3px solid var(--green); }
+    .card h3 { font-size: 12px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 14px; }
+
+    /* Form elements */
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+    .label { font-size: 12px; font-weight: 600; color: var(--text-sec); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; display: flex; gap: 6px; align-items: center; }
+    .label-opt { font-size: 11px; font-weight: 400; color: var(--text-ter); text-transform: none; letter-spacing: 0; }
+    input[type=text], input[type=number], input[type=date], textarea, select {
+      font-family: inherit; font-size: 15px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; width: 100%; outline: none; transition: border-color 0.15s;
+    }
+    input:focus, textarea:focus, select:focus { border-color: var(--accent); background: var(--surface); }
+    textarea { resize: vertical; min-height: 72px; }
+
+    /* Scale picker */
+    .scale { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 6px; }
+    .scale-btn { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 14px; font-weight: 500; color: var(--text-sec); cursor: pointer; transition: all 0.12s; }
+    .scale-btn.active-ned { background: var(--ned); border-color: var(--ned); color: #fff; font-weight: 600; }
+    .scale-btn.active-judi { background: var(--judi); border-color: var(--judi); color: #fff; font-weight: 600; }
+    .scale-hint { font-size: 13px; color: var(--text-sec); align-self: center; margin-left: 4px; }
+
+    /* Mood */
+    .mood-row { display: flex; gap: 8px; margin-top: 6px; }
+    .mood-btn { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); font-size: 22px; cursor: pointer; transition: all 0.12s; }
+    .mood-btn.active { border-color: var(--accent); background: var(--accent-light); }
+
+    /* Buttons */
+    .btn-primary { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; color: #fff; border: none; border-radius: 10px; cursor: pointer; transition: opacity 0.15s, transform 0.1s; margin-top: 4px; }
+    .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+    .btn-saved { background: var(--green) !important; }
+
+    /* Exercise checklist */
+    .ex-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+    .ex-row:last-child { border-bottom: none; }
+    .ex-chk { width: 24px; height: 24px; border-radius: 5px; border: 1.5px solid var(--border); background: var(--bg); cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.12s; }
+    .ex-chk.done-ned { background: var(--ned); border-color: var(--ned); color: #fff; }
+    .ex-chk.done-judi { background: var(--judi); border-color: var(--judi); color: #fff; }
+    .ex-name { font-size: 15px; font-weight: 500; line-height: 1.3; }
+    .ex-sets { font-size: 13px; color: var(--text-sec); margin-top: 2px; }
+    .ex-tip { font-size: 12px; color: var(--text-ter); margin-top: 3px; font-style: italic; }
+
+    /* Metrics grid */
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+    .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; }
+    .metric-label { font-size: 11px; color: var(--text-ter); margin-bottom: 4px; }
+    .metric-val { font-size: 22px; font-weight: 600; }
+
+    /* Nav */
+    .nav-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .nav-btn { padding: 8px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-size: 14px; color: var(--text-sec); cursor: pointer; }
+    .nav-center { flex: 1; text-align: center; font-size: 13px; color: var(--text-sec); }
+
+    /* Progress bar */
+    .prog-wrap { background: var(--border); border-radius: 4px; height: 5px; margin-bottom: 14px; overflow: hidden; }
+    .prog-bar { height: 5px; border-radius: 4px; transition: width 0.3s; }
+
+    /* Warning / info banners */
+    .banner { border-radius: 10px; padding: 12px 14px; font-size: 14px; margin-bottom: 12px; line-height: 1.5; }
+    .banner-warn { background: var(--warn-light); color: var(--warn); border: 1px solid #f0c090; }
+    .banner-rest { background: var(--bg); color: var(--text-sec); border: 1px solid var(--border); }
+    .banner-green { background: var(--green-light); color: var(--green); border: 1px solid #a9dfbf; }
+
+    /* Week summary table */
+    .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: center; }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { font-size: 13px; color: var(--text-sec); }
+    .stat-val { text-align: center; font-size: 19px; font-weight: 600; }
+    .stat-header { font-size: 13px; font-weight: 600; text-align: center; }
+    .week-col-ned { color: var(--ned); }
+    .week-col-judi { color: var(--judi); }
+
+    /* Notes list */
+    .note-item { border-left: 3px solid var(--border); padding-left: 10px; margin-bottom: 10px; }
+    .note-meta { font-size: 12px; color: var(--text-ter); margin-bottom: 2px; }
+    .note-text { font-size: 14px; }
+
+    /* Mini list */
+    .mini-item { display: flex; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+    .mini-date { color: var(--text-ter); min-width: 36px; flex-shrink: 0; }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 40px 20px; color: var(--text-sec); }
+    .empty-icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .empty-sub { font-size: 14px; line-height: 1.5; }
+
+    /* Two col grid */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+
+    /* Section subhead */
+    .section-label { font-size: 11px; font-weight: 600; color: var(--text-ter); text-transform: uppercase; letter-spacing: 0.06em; margin: 14px 0 8px; }
+
+    /* Setup */
+    .setup-intro { font-size: 15px; color: var(--text-sec); line-height: 1.6; margin-bottom: 18px; }
+    .day-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .day-pill { padding: 7px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); font-size: 14px; color: var(--text); cursor: pointer; transition: all 0.12s; }
+    .day-pill.sel { background: var(--red-light); color: var(--red); border-color: var(--red); }
+    .loc-row { display: flex; gap: 8px; margin-bottom: 16px; }
+    .loc-btn { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); font-size: 14px; color: var(--text); cursor: pointer; }
+    .loc-btn.sel { background: var(--accent-light); color: var(--accent-text); border-color: var(--accent); }
+
+    /* Footer reset */
+    .reset-link { text-align: center; font-size: 12px; color: var(--text-ter); margin-top: 20px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+
+// ── Data ──────────────────────────────────────────────────────
+
+const BW = {
+  1: [
+    {id:'bw0',name:'Bodyweight squat',sets:'2 × 10',tip:'Sit back into hips — you have the range, use comfortable depth'},
+    {id:'bw1',name:'Hip hinge',sets:'2 × 12',tip:'Soft knee bend, hinge at hip, feel hamstrings load'},
+    {id:'bw2',name:'Incline push-up',sets:'2 × 8–12',tip:'Hands on counter or bench, full range'},
+    {id:'bw3',name:'Dead bug',sets:'2 × 6 each side',tip:'Slow and controlled, low back stays flat'},
+    {id:'bw4',name:'Single-leg balance',sets:'2 × 20 sec each',tip:'Eyes open first, progress to eyes closed'}
+  ],
+  2: [
+    {id:'bw0',name:'Goblet squat',sets:'2 × 12',tip:'Light weight or water jug, sit back into depth'},
+    {id:'bw1',name:'Single-leg Romanian deadlift',sets:'2 × 8 each side',tip:'Bodyweight first, add load as confidence builds'},
+    {id:'bw2',name:'Floor push-up',sets:'3 × 10–15',tip:'Working toward 20-rep ceiling with full control'},
+    {id:'bw3',name:'Bird dog',sets:'2 × 8 each side',tip:'Contralateral reach, slow tempo, full extension'},
+    {id:'bw4',name:'Glute bridge',sets:'2 × 15',tip:'Drive hips up fully, squeeze at top for 1 sec'},
+    {id:'bw5',name:'Single-leg balance',sets:'2 × 30 sec each',tip:'Eyes closed, add small arm movements for challenge'}
+  ],
+  3: [
+    {id:'bw0',name:'Tempo goblet squat',sets:'3 × 10',tip:'3 sec down, 1 sec up — same weight feels much harder'},
+    {id:'bw1',name:'Tempo single-leg RDL',sets:'3 × 8 each',tip:'3 sec lower, 1 sec return — add light dumbbell if available'},
+    {id:'bw2',name:'Push-up',sets:'3 × 15–20',tip:'Full control throughout — quality over quantity'},
+    {id:'bw3',name:'Bird dog with hold',sets:'3 × 6 each',tip:'Hold extended position 3 sec each rep'},
+    {id:'bw4',name:'Glute bridge march',sets:'2 × 10 each',tip:'Hold bridge, alternate lifting knees'},
+    {id:'bw5',name:'Step-up slow eccentric',sets:'2 × 10 each',tip:'3 sec lower on descent — gym step or stairs'}
+  ]
+};
+
+const CARDIO = {
+  truckee: {
+    1:{opts:['Zone 2 walk (35–40 min)','Stationary bike Zone 2 (35–40 min)'],hr:'115–125 bpm',note:'Conversational pace. Altitude pushes HR faster — slow down if you can\'t talk easily.'},
+    2:{opts:['Zone 2 walk (45–55 min)','Stationary bike Zone 2 (45–55 min)','Hike (60–75 min, moderate terrain)'],hr:'115–130 bpm',note:'Add 2 min per session per week. One longer hike if energy is good.'},
+    3:{opts:['Zone 2 walk or bike (45–50 min)','Zone 3 fartlek (45 min with 3–4 × 3 min pushes)'],hr:'115–135 bpm',note:'One session per week becomes Zone 3 — moderate push for 3 min, not a sprint.'}
+  },
+  la: {
+    1:{opts:['Elliptical Zone 2 (35–40 min)','Gym bike Zone 2 (35–40 min)','Treadmill incline walk (35–40 min)'],hr:'115–125 bpm',note:'Elliptical is ideal — lowest impact, no eccentric load.'},
+    2:{opts:['Elliptical Zone 2 (45–55 min)','Gym bike Zone 2 (45–55 min)','Treadmill incline walk (50–60 min)'],hr:'115–130 bpm',note:'Coming down from Truckee you\'ll feel stronger — good time to push duration.'},
+    3:{opts:['Elliptical with 3–4 × 3 min Zone 3 pushes (45 min)','Gym bike fartlek (45 min)','Add dumbbell/cable work (15 min) on gym days'],hr:'115–135 bpm',note:'LA gym access opens cable and dumbbell options in Phase 3.'}
+  }
+};
+
+const JUDI_ROUTINE = {
+  mobility: [
+    {id:'jm0',name:'Seated thoracic opener',sets:'5 reps, slow',tip:'Sit tall, hands on shoulders, open chest side to side — no neck movement needed',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]},
+    {id:'jm1',name:'Standing hip circles',sets:'8 each direction, each leg',tip:'Hand on wall for support, small comfortable circles',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]},
+    {id:'jm2',name:'Shoulder rolls',sets:'10 forward, 10 backward',tip:'Slow and full — counters forward posture from cervical fusion',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]},
+    {id:'jm3',name:'Seated ankle circles',sets:'10 each direction, each foot',tip:'Simple but directly supports balance — ankles are the first line of fall prevention',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]}
+  ],
+  strength: [
+    {id:'js0',name:'Wall push-up',sets:'2 × 8',tip:'Hands shoulder-width on wall, lean in and push back — no neck or shoulder stress',weeks:[1,2,3,4]},
+    {id:'js1',name:'Sit-to-stand',sets:'2 × 8 slow',tip:'From a firm chair, stand and sit with control — one of the best functional strength exercises',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]},
+    {id:'js2',name:'Glute bridge',sets:'2 × 10',tip:'Lie on back, knees bent, lift hips — helps hip and lower back pain',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]},
+    {id:'js3',name:'Wall push-up',sets:'3 × 10',tip:'Building on earlier weeks — same movement, more volume',weeks:[5,6,7,8,9,10,11,12]},
+    {id:'js4',name:'Side step-tap',sets:'2 × 10 each side',tip:'Stand beside a low step, tap foot on and off — builds hip stability and balance',weeks:[5,6,7,8,9,10,11,12]}
+  ],
+  balance: [
+    {id:'jb0',name:'Tandem stand',sets:'2 × 20 sec each side',tip:'One foot in front of the other, heel to toe — hold wall nearby. Directly counters cervical proprioception loss.',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]},
+    {id:'jb1',name:'Single-leg stand',sets:'2 × 15 sec each leg',tip:'Wall nearby for safety — look straight ahead at a fixed point. Build to 30 sec over weeks.',weeks:[3,4,5,6,7,8,9,10,11,12]},
+    {id:'jb2',name:'Heel-to-toe walk',sets:'2 × 10 steps',tip:'Walk a straight line placing heel directly in front of toe — along a wall or hallway',weeks:[5,6,7,8,9,10,11,12]}
+  ],
+  cardio: [
+    {id:'jc0',name:'Walk',sets:'25–30 min (wks 1–4) · 30–40 min (wks 5–8) · 35–45 min (wks 9–12)',tip:'Your foundation. Comfortable pace — if you\'re breathing hard, slow down.',weeks:[1,2,3,4,5,6,7,8,9,10,11,12]}
+  ]
+};
+
+const PHASE_NAMES = ['','Phase 1 — Establish the pattern','Phase 2 — Build duration & load','Phase 3 — Intensity variation'];
+const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const FULLDAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const ENERGY_LABELS = ['','Very low','Low','Below avg','Average','Good','Strong','Great','Very strong','Excellent','Peak'];
+const SLEEP_LABELS = ['','1h','2h','3h','4h','5h','6h','7h','8h','9h','10h+'];
+const SLEEP_Q_LABELS = ['','Poor','Fair','Decent','Good','Great'];
+const MOOD_EMOJIS = ['','😔','😕','😐','🙂','😊'];
+
+// ── Storage ───────────────────────────────────────────────────
+
+function lsGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
+function lsSet(k,v) { try { localStorage.setItem(k,v); return true; } catch { return false; } }
+
+function getConfig(user) {
+  const raw = lsGet(`${user}_config`);
+  return raw ? JSON.parse(raw) : null;
+}
+function saveConfig(user, cfg) { lsSet(`${user}_config`, JSON.stringify(cfg)); }
+
+function getEntry(user, date) {
+  const raw = lsGet(`${user}_entry_${date}`);
+  return raw ? JSON.parse(raw) : {};
+}
+function saveEntry(user, date, data) {
+  lsSet(`${user}_entry_${date}`, JSON.stringify(data));
+  const datesRaw = lsGet(`${user}_dates`);
+  const dates = datesRaw ? JSON.parse(datesRaw) : [];
+  if (!dates.includes(date)) { dates.push(date); dates.sort(); lsSet(`${user}_dates`, JSON.stringify(dates)); }
+}
+function getRecentDates(user, n=7) {
+  const raw = lsGet(`${user}_dates`);
+  const all = raw ? JSON.parse(raw) : [];
+  return all.slice(-n).reverse();
+}
+function getExDone(user, date) {
+  const raw = lsGet(`${user}_ex_${date}`);
+  return raw ? JSON.parse(raw) : [];
+}
+function saveExDone(user, date, done) { lsSet(`${user}_ex_${date}`, JSON.stringify(done)); }
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function todayStr() { return new Date().toISOString().slice(0,10); }
+function fmtDate(d) {
+  const dt = new Date(d + 'T12:00:00');
+  return `${WEEKDAYS[dt.getDay()]} ${MONTHS[dt.getMonth()]} ${dt.getDate()}`;
+}
+function getWeek(start, view) {
+  const s = new Date(start + 'T00:00:00');
+  const v = new Date(view + 'T00:00:00');
+  return Math.min(Math.max(Math.floor((v-s)/(7*24*3600*1000))+1,1),12);
+}
+function getPhase(w) { return w<=4?1:w<=8?2:3; }
+function isHIT(days, dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  return days.includes(d.getDay());
+}
+function isRecovery(days, dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const prev = new Date(d); prev.setDate(prev.getDate()-1);
+  return days.includes(prev.getDay());
+}
+function addDays(dateStr, n) {
+  const d = new Date(dateStr + 'T12:00:00'); d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+}
+function avg(arr, key) {
+  const vals = arr.map(e=>e[key]).filter(v=>v&&v>0);
+  return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+}
+function clamp(v,mn,mx) { return Math.min(Math.max(v,mn),mx); }
+
+// ── State ─────────────────────────────────────────────────────
+
+const state = {
+  tab: 'ned-ex',   // ned-ex | judi-ex | ned-log | judi-log | week
+  nedViewDate: todayStr(),
+  judiViewDate: todayStr(),
+  nedEx: {},
+  judiEx: {},
+  nedLog: {},
+  judiLog: {},
+};
+
+function loadNedEx() { state.nedEx = getExDone('ned', state.nedViewDate); }
+function loadJudiEx() { state.judiEx = getExDone('judi', state.judiViewDate); }
+function loadNedLog() { state.nedLog = getEntry('ned', todayStr()); }
+function loadJudiLog() { state.judiLog = getEntry('judi', todayStr()); }
+
+// ── Render engine ─────────────────────────────────────────────
+
+function h(tag, attrs={}, ...children) {
+  const el = document.createElement(tag);
+  for (const [k,v] of Object.entries(attrs)) {
+    if (k==='class') el.className=v;
+    else if (k==='style'&&typeof v==='object') Object.assign(el.style,v);
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(),v);
+    else el.setAttribute(k,v);
+  }
+  for (const c of children.flat(Infinity)) {
+    if (c==null||c===false) continue;
+    el.appendChild(typeof c==='string'||typeof c==='number' ? document.createTextNode(c) : c);
+  }
+  return el;
+}
+
+function render() {
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  app.appendChild(buildApp());
+}
+
+// ── Top-level app ─────────────────────────────────────────────
+
+function buildApp() {
+  const wrap = h('div',{style:{height:'100%',display:'flex',flexDirection:'column'}});
+  wrap.appendChild(buildHeader());
+  const content = h('div',{class:'content'});
+  if (state.tab==='ned-ex') content.appendChild(buildNedEx());
+  else if (state.tab==='judi-ex') content.appendChild(buildJudiEx());
+  else if (state.tab==='ned-log') content.appendChild(buildLog('ned'));
+  else if (state.tab==='judi-log') content.appendChild(buildLog('judi'));
+  else if (state.tab==='week') content.appendChild(buildWeek());
+  wrap.appendChild(content);
+  return wrap;
+}
+
+function buildHeader() {
+  const hdr = h('div',{class:'header'});
+  const top = h('div',{class:'header-top'});
+  top.appendChild(h('span',{class:'header-title'},'Wellness Tracker'));
+  const now = new Date();
+  top.appendChild(h('span',{class:'header-date'},`${FULLDAYS[now.getDay()]}, ${MONTHS[now.getMonth()]} ${now.getDate()}`));
+  hdr.appendChild(top);
+
+  const tabs = h('div',{class:'tabs'});
+  const tabDefs = [
+    {id:'ned-ex',label:"Ned's Workout"},
+    {id:'judi-ex',label:"Judi's Workout"},
+    {id:'ned-log',label:'Ned Log'},
+    {id:'judi-log',label:'Judi Log'},
+    {id:'week',label:'Week'}
+  ];
+  const colorMap = {'ned-ex':'ned','ned-log':'ned','judi-ex':'judi','judi-log':'judi','week':'week'};
+  for (const t of tabDefs) {
+    const btn = h('button',{
+      class:`tab${state.tab===t.id?' active-'+colorMap[t.id]:''}`,
+      onClick:()=>{ state.tab=t.id; render(); }
+    }, t.label);
+    tabs.appendChild(btn);
+  }
+  hdr.appendChild(tabs);
+  return hdr;
+}
+
+// ── Ned Exercise ──────────────────────────────────────────────
+
+function buildNedEx() {
+  const cfg = getConfig('ned');
+  if (!cfg) return buildNedSetup();
+
+  const wrap = h('div',{});
+  const week = getWeek(cfg.startDate, state.nedViewDate);
+  const phase = getPhase(week);
+  const loc = cfg.location;
+  const hit = isHIT(cfg.hitDays, state.nedViewDate);
+  const rec = isRecovery(cfg.hitDays, state.nedViewDate);
+  const bw = BW[phase];
+  const cd = CARDIO[loc][phase];
+  const prog = Math.round((week/12)*100);
+  const isToday = state.nedViewDate===todayStr();
+  const done = getExDone('ned', state.nedViewDate);
+
+  // metrics
+  const metrics = h('div',{class:'metrics'});
+  for (const [l,v] of [['Week',`${week} of 12`],['Phase',String(phase)],['Done',String(done.length)]]) {
+    const m = h('div',{class:'metric'});
+    m.appendChild(h('div',{class:'metric-label'},l));
+    m.appendChild(h('div',{class:'metric-val',style:{color:'var(--ned)'}},v));
+    metrics.appendChild(m);
+  }
+  wrap.appendChild(metrics);
+
+  // progress bar
+  const pw = h('div',{class:'prog-wrap'});
+  pw.appendChild(h('div',{class:'prog-bar',style:{width:`${prog}%`,background:'var(--ned)'}}));
+  wrap.appendChild(pw);
+
+  // nav
+  const nav = h('div',{class:'nav-row'});
+  nav.appendChild(h('button',{class:'nav-btn',onClick:()=>{ state.nedViewDate=addDays(state.nedViewDate,-1); render(); }},'← Prev'));
+  nav.appendChild(h('div',{class:'nav-center'},`${isToday?'Today':fmtDate(state.nedViewDate)} · ${PHASE_NAMES[phase]}`));
+  nav.appendChild(h('button',{class:'nav-btn',onClick:()=>{ state.nedViewDate=addDays(state.nedViewDate,1); render(); }},'Next →'));
+  wrap.appendChild(nav);
+
+  // location toggle
+  const locRow = h('div',{class:'loc-row'});
+  for (const [id,label] of [['truckee','Truckee'],['la','Los Angeles']]) {
+    const btn = h('button',{class:`loc-btn${loc===id?' sel':''}`,onClick:()=>{
+      cfg.location=id; saveConfig('ned',cfg); render();
+    }},label);
+    locRow.appendChild(btn);
+  }
+  wrap.appendChild(locRow);
+
+  if (hit) {
+    wrap.appendChild(h('div',{class:'banner banner-warn'},'⚡ HIT day — Pliability only. No bodyweight block or cardio today. Rest and recover well.'));
+    wrap.appendChild(buildExCard('Pliability session','15–20 min',[
+      {id:'pliability',name:'Pliability.com session',sets:'15–20 min',tip:'Choose a recovery or maintenance session today'}
+    ], done, 'ned'));
+  } else if (rec) {
+    wrap.appendChild(h('div',{class:'banner banner-rest'},'🌙 Day after HIT — Pliability + gentle walk only. Skip the bodyweight block.'));
+    wrap.appendChild(buildExCard('Recovery day','',[
+      {id:'pliability',name:'Pliability.com session',sets:'15–20 min',tip:''},
+      {id:'rec-walk',name:'Gentle walk',sets:'20 min max, easy pace',tip:'If resting HR is elevated, skip this entirely'}
+    ], done, 'ned'));
+  } else {
+    wrap.appendChild(h('div',{class:'section-label'},'Pliability first (15–20 min)'));
+    wrap.appendChild(buildExCard('','',[
+      {id:'pliability',name:'Pliability.com session',sets:'15–20 min',tip:'Do this first — immediately follow with bodyweight block while warm'}
+    ], done, 'ned'));
+
+    wrap.appendChild(h('div',{class:'section-label'},'Bodyweight block (~12 min)'));
+    wrap.appendChild(buildExCard('','',bw,done,'ned'));
+
+    wrap.appendChild(h('div',{class:'section-label'},'Zone 2 cardio — pick one'));
+    const cdCard = h('div',{class:'card card-accent-ned'});
+    cdCard.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-sec)',marginBottom:'10px'}},`Target HR: ${cd.hr} · ${cd.note}`));
+    for (let i=0;i<cd.opts.length;i++) {
+      cdCard.appendChild(buildExRow({id:'c'+i,name:cd.opts[i],sets:'',tip:''},done,'ned'));
+    }
+    wrap.appendChild(cdCard);
+  }
+
+  wrap.appendChild(h('div',{class:'reset-link',onClick:()=>{ if(confirm('Reset Ned\'s setup?')){ localStorage.removeItem('ned_config'); render(); }}},'Reset program setup'));
+  return wrap;
+}
+
+function buildExCard(title, subtitle, exercises, done, user) {
+  const card = h('div',{class:`card card-accent-${user}`});
+  if (title) card.appendChild(h('h3',{},title));
+  if (subtitle) card.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-sec)',marginBottom:'10px'}},subtitle));
+  for (const ex of exercises) card.appendChild(buildExRow(ex,done,user));
+  return card;
+}
+
+function buildExRow(ex, done, user) {
+  const isDone = done.includes(ex.id);
+  const row = h('div',{class:'ex-row'});
+  const chk = h('div',{class:`ex-chk${isDone?` done-${user}`:''}`,onClick:()=>{
+    let d = getExDone(user, user==='ned'?state.nedViewDate:state.judiViewDate);
+    if (d.includes(ex.id)) d=d.filter(k=>k!==ex.id); else d.push(ex.id);
+    saveExDone(user, user==='ned'?state.nedViewDate:state.judiViewDate, d);
+    render();
+  }},isDone?'✓':'');
+  const info = h('div',{style:{flex:1}});
+  info.appendChild(h('div',{class:'ex-name'},ex.name));
+  if (ex.sets) info.appendChild(h('div',{class:'ex-sets'},ex.sets));
+  if (ex.tip) info.appendChild(h('div',{class:'ex-tip'},ex.tip));
+  row.appendChild(chk);
+  row.appendChild(info);
+  return row;
+}
+
+function buildNedSetup() {
+  let hitDays = [];
+  let loc = 'truckee';
+  const wrap = h('div',{});
+  const card = h('div',{class:'card'});
+  card.appendChild(h('h3',{},"Ned's 12-Week Program Setup"));
+  card.appendChild(h('p',{class:'setup-intro'},'One-time setup. Takes about 60 seconds.'));
+
+  card.appendChild(h('div',{class:'label'},'Program start date'));
+  const dateInput = h('input',{type:'date',value:todayStr(),'class':'field'});
+  card.appendChild(dateInput);
+
+  card.appendChild(h('div',{class:'label',style:{marginTop:'14px'}},'Typical HIT days (tap to mark)'));
+  const pills = h('div',{class:'day-pills'});
+  for (let i=0;i<7;i++) {
+    const btn = h('button',{class:'day-pill',onClick:()=>{
+      if(hitDays.includes(i)) hitDays=hitDays.filter(d=>d!==i); else hitDays.push(i);
+      btn.className='day-pill'+(hitDays.includes(i)?' sel':'');
+    }},WEEKDAYS[i]);
+    pills.appendChild(btn);
+  }
+  card.appendChild(pills);
+
+  card.appendChild(h('div',{class:'label'},'Current location'));
+  const locRow = h('div',{class:'loc-row'});
+  const tBtn = h('button',{class:'loc-btn sel',onClick:()=>{ loc='truckee'; tBtn.className='loc-btn sel'; lBtn.className='loc-btn'; }}, 'Truckee');
+  const lBtn = h('button',{class:'loc-btn',onClick:()=>{ loc='la'; lBtn.className='loc-btn sel'; tBtn.className='loc-btn'; }}, 'Los Angeles');
+  locRow.appendChild(tBtn); locRow.appendChild(lBtn);
+  card.appendChild(locRow);
+
+  const startBtn = h('button',{class:'btn-primary',style:{background:'var(--ned)'},onClick:()=>{
+    const d = dateInput.value;
+    if(!d){alert('Please enter a start date.');return;}
+    saveConfig('ned',{startDate:d,hitDays,location:loc});
+    render();
+  }},"Start Ned's program");
+  card.appendChild(startBtn);
+  wrap.appendChild(card);
+  return wrap;
+}
+
+// ── Judi Exercise ─────────────────────────────────────────────
+
+function buildJudiEx() {
+  const cfg = getConfig('judi');
+  if (!cfg) return buildJudiSetup();
+
+  const wrap = h('div',{});
+  const week = getWeek(cfg.startDate, state.judiViewDate);
+  const isToday = state.judiViewDate===todayStr();
+  const done = getExDone('judi', state.judiViewDate);
+  const prog = Math.round((week/12)*100);
+
+  // greeting
+  const hr = new Date().getHours();
+  const greet = hr<12?'Good morning, Judi':hr<17?'Good afternoon, Judi':'Good evening, Judi';
+  wrap.appendChild(h('div',{style:{fontSize:'20px',fontWeight:'600',marginBottom:'4px'}},isToday?greet:fmtDate(state.judiViewDate)));
+  wrap.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-ter)',marginBottom:'14px'}},`Week ${week} of 12`));
+
+  // progress bar
+  const pw = h('div',{class:'prog-wrap'});
+  pw.appendChild(h('div',{class:'prog-bar',style:{width:`${prog}%`,background:'var(--judi)'}}));
+  wrap.appendChild(pw);
+
+  // nav
+  const nav = h('div',{class:'nav-row'});
+  nav.appendChild(h('button',{class:'nav-btn',onClick:()=>{ state.judiViewDate=addDays(state.judiViewDate,-1); render(); }},'← Prev'));
+  nav.appendChild(h('div',{class:'nav-center'},isToday?'Today':fmtDate(state.judiViewDate)));
+  nav.appendChild(h('button',{class:'nav-btn',onClick:()=>{ state.judiViewDate=addDays(state.judiViewDate,1); render(); }},'Next →'));
+  wrap.appendChild(nav);
+
+  if (week<=2) {
+    wrap.appendChild(h('div',{class:'banner banner-rest',style:{fontSize:'14px'}},'Start easy — just do what feels comfortable. The goal is simply to move a little each day.'));
+  }
+  wrap.appendChild(h('div',{class:'banner banner-warn',style:{fontSize:'13px'}},'Nothing here should cause pain. If something doesn\'t feel right, skip it — that\'s always the right call.'));
+
+  // sections
+  const sections = [
+    {key:'mobility',label:'Mobility (~5 min)'},
+    {key:'strength',label:'Gentle strength (~8 min)'},
+    {key:'balance',label:'Balance (~3 min)'},
+    {key:'cardio',label:'Your walk'}
+  ];
+
+  for (const sec of sections) {
+    const exercises = JUDI_ROUTINE[sec.key].filter(e=>e.weeks.includes(week));
+    if (!exercises.length) continue;
+    wrap.appendChild(h('div',{class:'section-label'},sec.label));
+    const card = h('div',{class:'card card-accent-judi'});
+    for (const ex of exercises) card.appendChild(buildExRow(ex,done,'judi'));
+    wrap.appendChild(card);
+  }
+
+  // all done?
+  const allIds = Object.values(JUDI_ROUTINE).flat().filter(e=>e.weeks.includes(week)).map(e=>e.id);
+  const allDone = allIds.every(id=>done.includes(id));
+  if (allDone && allIds.length>0) {
+    wrap.appendChild(h('div',{class:'banner banner-green'},'✨ That\'s everything for today — well done. Every little bit counts.'));
+  }
+
+  wrap.appendChild(h('div',{class:'reset-link',onClick:()=>{ if(confirm("Reset Judi's setup?")){ localStorage.removeItem('judi_config'); render(); }}},"Reset Judi's setup"));
+  return wrap;
+}
+
+function buildJudiSetup() {
+  const wrap = h('div',{});
+  const card = h('div',{class:'card'});
+  card.appendChild(h('h3',{},'Hi Judi 👋'));
+  card.appendChild(h('p',{class:'setup-intro'},"This is your personal daily movement guide — a few gentle exercises each day, at your own pace. Nothing complicated. Tap things off as you do them."));
+  card.appendChild(h('div',{class:'label'},'What\'s today\'s date?'));
+  const dateInput = h('input',{type:'date',value:todayStr()});
+  card.appendChild(dateInput);
+  card.appendChild(h('button',{class:'btn-primary',style:{background:'var(--judi)',marginTop:'14px'},onClick:()=>{
+    const d = dateInput.value;
+    if(!d){alert('Please enter a start date.');return;}
+    saveConfig('judi',{startDate:d});
+    render();
+  }},"Let's get started"));
+  wrap.appendChild(card);
+  return wrap;
+}
+
+// ── Wellness Log ──────────────────────────────────────────────
+
+function buildLog(user) {
+  const color = user==='ned'?'var(--ned)':'var(--judi)';
+  const accentClass = `card-accent-${user}`;
+  const scaleClass = `active-${user}`;
+  const entry = getEntry(user, todayStr());
+
+  function setField(k,v) {
+    const e = getEntry(user,todayStr());
+    e[k]=v;
+    saveEntry(user,todayStr(),e);
+    render();
+  }
+
+  const wrap = h('div',{});
+  wrap.appendChild(h('div',{style:{fontSize:'14px',color:'var(--text-sec)',marginBottom:'14px'}},`How was your day, ${user==='ned'?'Ned':'Judi'}?`));
+
+  // Sleep
+  const sleepCard = h('div',{class:`card ${accentClass}`});
+  sleepCard.appendChild(h('h3',{},'Sleep'));
+  sleepCard.appendChild(buildScaleField('Hours slept',entry.sleep||0,v=>setField('sleep',v),10,SLEEP_LABELS,color,scaleClass));
+  sleepCard.appendChild(buildScaleField('Sleep quality',entry.sleepQuality||0,v=>setField('sleepQuality',v),5,SLEEP_Q_LABELS,color,scaleClass));
+  wrap.appendChild(sleepCard);
+
+  // Feel
+  const feelCard = h('div',{class:`card ${accentClass}`});
+  feelCard.appendChild(h('h3',{},'How you feel'));
+  feelCard.appendChild(buildScaleField('Energy level',entry.energy||0,v=>setField('energy',v),10,ENERGY_LABELS,color,scaleClass));
+
+  // Mood
+  const moodField = h('div',{class:'field'});
+  moodField.appendChild(h('div',{class:'label'},'Mood'));
+  const moodRow = h('div',{class:'mood-row'});
+  for (let n=1;n<=5;n++) {
+    const btn = h('button',{class:`mood-btn${(entry.mood||0)===n?' active':''}`,onClick:()=>setField('mood',(entry.mood||0)===n?0:n)},['😔','😕','😐','🙂','😊'][n-1]);
+    moodRow.appendChild(btn);
+  }
+  moodField.appendChild(moodRow);
+  feelCard.appendChild(moodField);
+
+  // Pain
+  const painField = h('div',{class:'field'});
+  painField.appendChild(h('div',{class:'label'},'Pain or discomfort ',h('span',{class:'label-opt'},'optional')));
+  const painInput = h('input',{type:'text',value:entry.pain||'',placeholder:'e.g. left hip sore, lower back tight'});
+  painInput.addEventListener('change',e=>setField('pain',e.target.value));
+  painField.appendChild(painInput);
+  feelCard.appendChild(painField);
+  wrap.appendChild(feelCard);
+
+  // Movement
+  const moveCard = h('div',{class:`card ${accentClass}`});
+  moveCard.appendChild(h('h3',{},'Movement'));
+  const exField = h('div',{class:'field'});
+  exField.appendChild(h('div',{class:'label'},'What did you do? ',h('span',{class:'label-opt'},'optional')));
+  const exInput = h('input',{type:'text',value:entry.exercise||'',placeholder:'e.g. Zone 2 bike, walk, HIT, Pliability'});
+  exInput.addEventListener('change',e=>setField('exercise',e.target.value));
+  exField.appendChild(exInput);
+  moveCard.appendChild(exField);
+
+  const durField = h('div',{class:'field'});
+  durField.appendChild(h('div',{class:'label'},'Duration (minutes) ',h('span',{class:'label-opt'},'optional')));
+  const durInput = h('input',{type:'number',value:entry.exerciseDuration||'',placeholder:'45',style:{maxWidth:'120px'}});
+  durInput.addEventListener('change',e=>setField('exerciseDuration',e.target.value));
+  durField.appendChild(durInput);
+  moveCard.appendChild(durField);
+  wrap.appendChild(moveCard);
+
+  // Notes
+  const notesCard = h('div',{class:`card ${accentClass}`});
+  notesCard.appendChild(h('h3',{},'Notes'));
+  const notesField = h('div',{class:'field'});
+  notesField.appendChild(h('div',{class:'label'},'Anything else? ',h('span',{class:'label-opt'},'optional')));
+  const notesTA = h('textarea',{placeholder:'Stress, nutrition, supplements, how a workout felt...'});
+  notesTA.value = entry.notes||'';
+  notesTA.addEventListener('change',e=>setField('notes',e.target.value));
+  notesField.appendChild(notesTA);
+  notesCard.appendChild(notesField);
+  wrap.appendChild(notesCard);
+
+  // Save button
+  const saveBtn = h('button',{class:'btn-primary',style:{background:color},onClick:()=>{
+    // flush any pending input values
+    const currentEntry = getEntry(user,todayStr());
+    currentEntry.pain = painInput.value;
+    currentEntry.exercise = exInput.value;
+    currentEntry.exerciseDuration = durInput.value;
+    currentEntry.notes = notesTA.value;
+    currentEntry.savedAt = new Date().toISOString();
+    saveEntry(user,todayStr(),currentEntry);
+    saveBtn.textContent = '✓ Saved';
+    saveBtn.classList.add('btn-saved');
+    setTimeout(()=>{ saveBtn.textContent="Save today's log"; saveBtn.classList.remove('btn-saved'); },2500);
+  }},"Save today's log");
+  wrap.appendChild(saveBtn);
+
+  return wrap;
+}
+
+function buildScaleField(label, value, onChange, max, labels, color, scaleClass) {
+  const field = h('div',{class:'field'});
+  field.appendChild(h('div',{class:'label'},label));
+  const scale = h('div',{class:'scale'});
+  for (let n=1;n<=max;n++) {
+    const btn = h('button',{class:`scale-btn${value===n?' '+scaleClass:''}`,onClick:()=>onChange(value===n?0:n)},String(n));
+    scale.appendChild(btn);
+  }
+  if (labels && value>0) scale.appendChild(h('span',{class:'scale-hint'},labels[value]));
+  field.appendChild(scale);
+  return field;
+}
+
+// ── Week Summary ──────────────────────────────────────────────
+
+function buildWeek() {
+  const wrap = h('div',{});
+  wrap.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-sec)',marginBottom:'14px'}},'Last 7 days — averages and highlights'));
+
+  const nedDates = getRecentDates('ned',7);
+  const judiDates = getRecentDates('judi',7);
+  const nedEntries = nedDates.map(d=>({...getEntry('ned',d),date:d})).filter(e=>Object.keys(e).length>1);
+  const judiEntries = judiDates.map(d=>({...getEntry('judi',d),date:d})).filter(e=>Object.keys(e).length>1);
+
+  if (!nedEntries.length && !judiEntries.length) {
+    const empty = h('div',{class:'empty'});
+    empty.appendChild(h('div',{class:'empty-icon'},'📋'));
+    empty.appendChild(h('div',{class:'empty-title'},'No entries yet this week'));
+    empty.appendChild(h('div',{class:'empty-sub'},'Switch to Ned Log or Judi Log and add today\'s entry to get started.'));
+    wrap.appendChild(empty);
+    return wrap;
+  }
+
+  // Stats table
+  const statsCard = h('div',{class:'card'});
+  const headerRow = h('div',{class:'stat-row'});
+  headerRow.appendChild(h('div',{}));
+  headerRow.appendChild(h('div',{class:'stat-header week-col-ned'},'Ned'));
+  headerRow.appendChild(h('div',{class:'stat-header week-col-judi'},'Judi'));
+  statsCard.appendChild(headerRow);
+
+  const stats = [
+    {label:'Avg sleep', fn:(entries)=>{ const a=avg(entries,'sleep'); return a==='—'?a:a+'h'; }},
+    {label:'Sleep quality', fn:(entries)=>{ const a=avg(entries,'sleepQuality'); return a==='—'?a:a+'/5'; }},
+    {label:'Avg energy', fn:(entries)=>{ const a=avg(entries,'energy'); return a==='—'?a:a+'/10'; }},
+    {label:'Avg mood', fn:(entries)=>{ const a=avg(entries,'mood'); return a==='—'?a:a+'/5'; }},
+    {label:'Days logged', fn:(entries)=>String(entries.length)},
+  ];
+
+  for (const s of stats) {
+    const row = h('div',{class:'stat-row'});
+    row.appendChild(h('div',{class:'stat-label'},s.label));
+    const nv = s.fn(nedEntries);
+    const jv = s.fn(judiEntries);
+    row.appendChild(h('div',{class:'stat-val week-col-ned'},nv==='—'?h('span',{style:{color:'var(--text-ter)'}},nv):nv));
+    row.appendChild(h('div',{class:'stat-val week-col-judi'},jv==='—'?h('span',{style:{color:'var(--text-ter)'}},jv):jv));
+    statsCard.appendChild(row);
+  }
+  wrap.appendChild(statsCard);
+
+  // Movement + Pain side by side
+  const twoCol = h('div',{class:'two-col'});
+  for (const [user,entries,color] of [['ned',nedEntries,'var(--ned)'],['judi',judiEntries,'var(--judi)']]) {
+    const card = h('div',{class:'card'});
+    card.appendChild(h('h3',{style:{color}},`${user==='ned'?'Ned':'Judi'} — movement`));
+    const exItems = entries.filter(e=>e.exercise);
+    if (!exItems.length) { card.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-ter)'}},'None logged')); }
+    else for (const e of exItems) {
+      const item = h('div',{class:'mini-item'});
+      item.appendChild(h('span',{class:'mini-date'},fmtDate(e.date).slice(0,6)));
+      item.appendChild(h('span',{style:{color,flex:'1'}},e.exercise+(e.exerciseDuration?` (${e.exerciseDuration}m)`:'')));
+      card.appendChild(item);
+    }
+    twoCol.appendChild(card);
+  }
+  wrap.appendChild(twoCol);
+
+  const painCol = h('div',{class:'two-col'});
+  for (const [user,entries,color] of [['ned',nedEntries,'var(--ned)'],['judi',judiEntries,'var(--judi)']]) {
+    const card = h('div',{class:'card'});
+    card.appendChild(h('h3',{style:{color}},`${user==='ned'?'Ned':'Judi'} — pain notes`));
+    const pItems = entries.filter(e=>e.pain);
+    if (!pItems.length) { card.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-ter)'}},'None noted')); }
+    else for (const e of pItems) {
+      const item = h('div',{class:'mini-item'});
+      item.appendChild(h('span',{class:'mini-date'},fmtDate(e.date).slice(0,6)));
+      item.appendChild(h('span',{style:{color}},e.pain));
+      card.appendChild(item);
+    }
+    painCol.appendChild(card);
+  }
+  wrap.appendChild(painCol);
+
+  // Notes
+  const allNotes = [
+    ...nedEntries.filter(e=>e.notes).map(e=>({...e,who:'ned'})),
+    ...judiEntries.filter(e=>e.notes).map(e=>({...e,who:'judi'}))
+  ].sort((a,b)=>b.date.localeCompare(a.date));
+
+  if (allNotes.length) {
+    const notesCard = h('div',{class:'card'});
+    notesCard.appendChild(h('h3',{},'Notes this week'));
+    for (const e of allNotes) {
+      const item = h('div',{class:'note-item',style:{borderLeftColor:e.who==='ned'?'var(--ned)':'var(--judi)'}});
+      item.appendChild(h('div',{class:'note-meta'},`${e.who==='ned'?'Ned':'Judi'} · ${fmtDate(e.date)}`));
+      item.appendChild(h('div',{class:'note-text'},e.notes));
+      notesCard.appendChild(item);
+    }
+    wrap.appendChild(notesCard);
+  }
+
+  return wrap;
+}
+
+// ── Boot ──────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
