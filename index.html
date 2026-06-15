@@ -622,13 +622,67 @@ function buildJudiSetup() {
   return wrap;
 }
 
+// ── Workout → Log summary ─────────────────────────────────────
+
+function buildWorkoutSummary(user) {
+  const done = getExDone(user, todayStr());
+  if (!done.length) return null;
+  const cfg = getConfig(user);
+  const parts = [];
+  let estMins = 0;
+  if (user === 'ned') {
+    if (done.includes('pliability')) { parts.push('Pliability'); estMins += 18; }
+    const phase = cfg ? getPhase(getWeek(cfg.startDate, todayStr())) : 1;
+    const bwDone = BW[phase].filter(e => done.includes(e.id));
+    if (bwDone.length) { parts.push('Bodyweight block (' + bwDone.length + '/' + BW[phase].length + ' exercises)'); estMins += 12; }
+    if (done.includes('rec-walk')) { parts.push('Gentle walk'); estMins += 20; }
+    const cardioDone = done.filter(k => k.startsWith('c'));
+    if (cardioDone.length && cfg) {
+      const loc = cfg.location || 'truckee';
+      const phase2 = getPhase(getWeek(cfg.startDate, todayStr()));
+      const cd = CARDIO[loc][phase2];
+      const idx = parseInt(cardioDone[0].slice(1));
+      if (cd && cd.opts[idx]) {
+        const label = cd.opts[idx].replace(/\s*\(.*?\)/g,'').trim();
+        parts.push(label);
+        const m = cd.opts[idx].match(/(\d+)(?:\u2013(\d+))?\s*min/);
+        if (m) estMins += m[2] ? Math.round((parseInt(m[1])+parseInt(m[2]))/2) : parseInt(m[1]);
+        else estMins += 40;
+      }
+    }
+  } else {
+    const cfg2 = getConfig('judi');
+    const week = cfg2 ? getWeek(cfg2.startDate, todayStr()) : 1;
+    const allEx = Object.values(JUDI_ROUTINE).flat().filter(e=>e.weeks.includes(week));
+    const doneEx = allEx.filter(e=>done.includes(e.id));
+    const cats = { mobility:0, strength:0, balance:0, cardio:0 };
+    for (const e of doneEx) {
+      for (const [cat, exArr] of Object.entries(JUDI_ROUTINE)) {
+        if (exArr.find(x=>x.id===e.id)) { cats[cat]++; break; }
+      }
+    }
+    if (cats.mobility) { parts.push('Mobility (' + cats.mobility + ' exercises)'); estMins += 5; }
+    if (cats.strength) { parts.push('Gentle strength (' + cats.strength + ' exercises)'); estMins += 8; }
+    if (cats.balance) { parts.push('Balance work (' + cats.balance + ' exercises)'); estMins += 3; }
+    if (cats.cardio) { parts.push('Walk'); estMins += 35; }
+  }
+  return parts.length ? { summary: parts.join(' + '), estMins } : null;
+}
+
 // ── Wellness Log ──────────────────────────────────────────────
 
 function buildLog(user) {
   const color = user==='ned'?'var(--ned)':'var(--judi)';
-  const accentClass = `card-accent-${user}`;
-  const scaleClass = `active-${user}`;
+  const accentClass = 'card-accent-' + user;
+  const scaleClass = 'active-' + user;
   const entry = getEntry(user, todayStr());
+  const workoutSummary = buildWorkoutSummary(user);
+
+  if (workoutSummary && !entry.exercise) {
+    entry.exercise = workoutSummary.summary;
+    entry.exerciseDuration = String(workoutSummary.estMins);
+    saveEntry(user, todayStr(), entry);
+  }
 
   function setField(k,v) {
     const e = getEntry(user,todayStr());
@@ -638,32 +692,34 @@ function buildLog(user) {
   }
 
   const wrap = h('div',{});
-  wrap.appendChild(h('div',{style:{fontSize:'14px',color:'var(--text-sec)',marginBottom:'14px'}},`How was your day, ${user==='ned'?'Ned':'Judi'}?`));
+  wrap.appendChild(h('div',{style:{fontSize:'14px',color:'var(--text-sec)',marginBottom:'14px'}},'How was your day, ' + (user==='ned'?'Ned':'Judi') + '?'));
 
-  // Sleep
-  const sleepCard = h('div',{class:`card ${accentClass}`});
+  if (workoutSummary) {
+    wrap.appendChild(h('div',{class:'banner',style:{background:'var(--accent-light)',border:'1px solid #b2d4ce',color:'var(--accent-text)',marginBottom:'12px',fontSize:'13px'}},
+      '✓ Workout logged: ' + workoutSummary.summary + ' (~' + workoutSummary.estMins + ' min). Edit below if needed.'
+    ));
+  }
+
+  const sleepCard = h('div',{class:'card ' + accentClass});
   sleepCard.appendChild(h('h3',{},'Sleep'));
   sleepCard.appendChild(buildScaleField('Hours slept',entry.sleep||0,v=>setField('sleep',v),10,SLEEP_LABELS,color,scaleClass));
   sleepCard.appendChild(buildScaleField('Sleep quality',entry.sleepQuality||0,v=>setField('sleepQuality',v),5,SLEEP_Q_LABELS,color,scaleClass));
   wrap.appendChild(sleepCard);
 
-  // Feel
-  const feelCard = h('div',{class:`card ${accentClass}`});
+  const feelCard = h('div',{class:'card ' + accentClass});
   feelCard.appendChild(h('h3',{},'How you feel'));
   feelCard.appendChild(buildScaleField('Energy level',entry.energy||0,v=>setField('energy',v),10,ENERGY_LABELS,color,scaleClass));
 
-  // Mood
   const moodField = h('div',{class:'field'});
   moodField.appendChild(h('div',{class:'label'},'Mood'));
   const moodRow = h('div',{class:'mood-row'});
   for (let n=1;n<=5;n++) {
-    const btn = h('button',{class:`mood-btn${(entry.mood||0)===n?' active':''}`,onClick:()=>setField('mood',(entry.mood||0)===n?0:n)},['😔','😕','😐','🙂','😊'][n-1]);
+    const btn = h('button',{class:'mood-btn' + ((entry.mood||0)===n?' active':''),onClick:()=>setField('mood',(entry.mood||0)===n?0:n)},['\u{1F614}','\u{1F615}','\u{1F610}','\u{1F642}','\u{1F60A}'][n-1]);
     moodRow.appendChild(btn);
   }
   moodField.appendChild(moodRow);
   feelCard.appendChild(moodField);
 
-  // Pain
   const painField = h('div',{class:'field'});
   painField.appendChild(h('div',{class:'label'},'Pain or discomfort ',h('span',{class:'label-opt'},'optional')));
   const painInput = h('input',{type:'text',value:entry.pain||'',placeholder:'e.g. left hip sore, lower back tight'});
@@ -672,18 +728,17 @@ function buildLog(user) {
   feelCard.appendChild(painField);
   wrap.appendChild(feelCard);
 
-  // Movement
-  const moveCard = h('div',{class:`card ${accentClass}`});
+  const moveCard = h('div',{class:'card ' + accentClass});
   moveCard.appendChild(h('h3',{},'Movement'));
   const exField = h('div',{class:'field'});
-  exField.appendChild(h('div',{class:'label'},'What did you do? ',h('span',{class:'label-opt'},'optional')));
+  exField.appendChild(h('div',{class:'label'},'What did you do? ',h('span',{class:'label-opt'},workoutSummary?'auto-filled from workout':'optional')));
   const exInput = h('input',{type:'text',value:entry.exercise||'',placeholder:'e.g. Zone 2 bike, walk, HIT, Pliability'});
   exInput.addEventListener('change',e=>setField('exercise',e.target.value));
   exField.appendChild(exInput);
   moveCard.appendChild(exField);
 
   const durField = h('div',{class:'field'});
-  durField.appendChild(h('div',{class:'label'},'Duration (minutes) ',h('span',{class:'label-opt'},'optional')));
+  durField.appendChild(h('div',{class:'label'},'Duration (minutes) ',h('span',{class:'label-opt'},workoutSummary?'estimated':'optional')));
   const durInput = h('input',{type:'number',value:entry.exerciseDuration||'',placeholder:'45',style:{maxWidth:'120px'}});
   durInput.addEventListener('change',e=>setField('exerciseDuration',e.target.value));
   durField.appendChild(durInput);
