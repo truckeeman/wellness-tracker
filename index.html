@@ -164,6 +164,11 @@
 
     /* Footer reset */
     .reset-link { text-align: center; font-size: 12px; color: var(--text-ter); margin-top: 20px; cursor: pointer; }
+    .cardio-mins { display: flex; align-items: center; gap: 6px; margin-top: 6px; margin-left: 36px; }
+    .cardio-mins input { width: 64px; font-size: 14px; padding: 6px 8px; }
+    .cardio-mins label { font-size: 13px; color: var(--text-ter); }
+    .autosave-indicator { text-align: center; font-size: 12px; color: var(--text-ter); margin-top: 14px; padding-bottom: 8px; min-height: 20px; transition: color 0.3s; }
+    .autosave-indicator.saved { color: var(--green); }
   </style>
 </head>
 <body>
@@ -275,6 +280,23 @@ function getExDone(user, date) {
   return raw ? JSON.parse(raw) : [];
 }
 function saveExDone(user, date, done) { lsSet(`${user}_ex_${date}`, JSON.stringify(done)); }
+
+// ── Cardio minutes storage ───────────────────────────────────
+function getCardioMins(user, date, id) {
+  const raw = lsGet(user + '_cardio_' + date);
+  const data = raw ? JSON.parse(raw) : {};
+  return data[id] || '';
+}
+function saveCardioMins(user, date, id, mins) {
+  const raw = lsGet(user + '_cardio_' + date);
+  const data = raw ? JSON.parse(raw) : {};
+  if (mins) data[id] = mins; else delete data[id];
+  lsSet(user + '_cardio_' + date, JSON.stringify(data));
+}
+function getAllCardioMins(user, date) {
+  const raw = lsGet(user + '_cardio_' + date);
+  return raw ? JSON.parse(raw) : {};
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -461,16 +483,46 @@ function buildNedEx() {
     wrap.appendChild(h('div',{class:'section-label'},'Bodyweight block (~12 min)'));
     wrap.appendChild(buildExCard('','',bw,done,'ned'));
 
-    wrap.appendChild(h('div',{class:'section-label'},'Zone 2 cardio — pick one'));
+    wrap.appendChild(h('div',{class:'section-label'},'Zone 2 cardio — log each activity'));
     const cdCard = h('div',{class:'card card-accent-ned'});
-    cdCard.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-sec)',marginBottom:'10px'}},`Target HR: ${cd.hr} · ${cd.note}`));
+    cdCard.appendChild(h('div',{style:{fontSize:'13px',color:'var(--text-sec)',marginBottom:'10px'}},'Target HR: ' + cd.hr + ' · ' + cd.note));
     for (let i=0;i<cd.opts.length;i++) {
-      cdCard.appendChild(buildExRow({id:'c'+i,name:cd.opts[i],sets:'',tip:''},done,'ned'));
+      const cardioMins = getCardioMins('ned', state.nedViewDate, 'c'+i);
+      cdCard.appendChild(buildCardioRow({id:'c'+i,name:cd.opts[i]},done,'ned',cardioMins));
     }
     wrap.appendChild(cdCard);
   }
 
   wrap.appendChild(h('div',{class:'reset-link',onClick:()=>{ if(confirm('Reset Ned\'s setup?')){ localStorage.removeItem('ned_config'); render(); }}},'Reset program setup'));
+  return wrap;
+}
+
+function buildCardioRow(ex, done, user, currentMins) {
+  const isDone = done.includes(ex.id);
+  const viewDate = user==='ned'?state.nedViewDate:state.judiViewDate;
+  const wrap = h('div',{});
+  const row = h('div',{class:'ex-row'});
+  const chk = h('div',{class:'ex-chk' + (isDone?' done-'+user:''),onClick:()=>{
+    let d = getExDone(user, viewDate);
+    if (d.includes(ex.id)) d=d.filter(k=>k!==ex.id); else d.push(ex.id);
+    saveExDone(user, viewDate, d);
+    render();
+  }},isDone?'✓':'');
+  const info = h('div',{style:{flex:1}});
+  info.appendChild(h('div',{class:'ex-name'},ex.name));
+  row.appendChild(chk);
+  row.appendChild(info);
+  wrap.appendChild(row);
+  // Always show minutes input (whether checked or not)
+  const minsRow = h('div',{class:'cardio-mins'});
+  const minsInput = h('input',{type:'number',value:currentMins,placeholder:'min',min:'0',max:'180'});
+  minsInput.addEventListener('input', e => {
+    saveCardioMins(user, viewDate, ex.id, e.target.value);
+    // update workout summary in log if already auto-filled
+  });
+  minsRow.appendChild(minsInput);
+  minsRow.appendChild(h('label',{},'minutes'));
+  wrap.appendChild(minsRow);
   return wrap;
 }
 
@@ -641,14 +693,24 @@ function buildWorkoutSummary(user) {
       const loc = cfg.location || 'truckee';
       const phase2 = getPhase(getWeek(cfg.startDate, todayStr()));
       const cd = CARDIO[loc][phase2];
-      const idx = parseInt(cardioDone[0].slice(1));
-      if (cd && cd.opts[idx]) {
-        const label = cd.opts[idx].replace(/\s*\(.*?\)/g,'').trim();
-        parts.push(label);
-        const m = cd.opts[idx].match(/(\d+)(?:\u2013(\d+))?\s*min/);
-        if (m) estMins += m[2] ? Math.round((parseInt(m[1])+parseInt(m[2]))/2) : parseInt(m[1]);
-        else estMins += 40;
+      const cardioMinsData = getAllCardioMins('ned', todayStr());
+      const cardioParts = [];
+      let cardioTotal = 0;
+      for (const cid of cardioDone) {
+        const idx = parseInt(cid.slice(1));
+        if (cd && cd.opts[idx]) {
+          const label = cd.opts[idx].replace(/\s*\(.*?\)/g,'').trim();
+          const mins = parseInt(cardioMinsData[cid]) || 0;
+          cardioParts.push(label + (mins ? ' (' + mins + ' min)' : ''));
+          if (mins) cardioTotal += mins;
+          else {
+            const m = cd.opts[idx].match(/(\d+)(?:\u2013(\d+))?\s*min/);
+            if (m) cardioTotal += m[2] ? Math.round((parseInt(m[1])+parseInt(m[2]))/2) : parseInt(m[1]);
+            else cardioTotal += 40;
+          }
+        }
       }
+      if (cardioParts.length) { parts.push(cardioParts.join(' + ')); estMins += cardioTotal; }
     }
   } else {
     const cfg2 = getConfig('judi');
@@ -757,21 +819,30 @@ function buildLog(user) {
   notesCard.appendChild(notesField);
   wrap.appendChild(notesCard);
 
-  // Save button
-  const saveBtn = h('button',{class:'btn-primary',style:{background:color},onClick:()=>{
-    // flush any pending input values
-    const currentEntry = getEntry(user,todayStr());
-    currentEntry.pain = painInput.value;
-    currentEntry.exercise = exInput.value;
-    currentEntry.exerciseDuration = durInput.value;
-    currentEntry.notes = notesTA.value;
-    currentEntry.savedAt = new Date().toISOString();
-    saveEntry(user,todayStr(),currentEntry);
-    saveBtn.textContent = '✓ Saved';
-    saveBtn.classList.add('btn-saved');
-    setTimeout(()=>{ saveBtn.textContent="Save today's log"; saveBtn.classList.remove('btn-saved'); },2500);
-  }},"Save today's log");
-  wrap.appendChild(saveBtn);
+  // Auto-save indicator
+  const indicator = h('div',{class:'autosave-indicator'},'Changes save automatically');
+  wrap.appendChild(indicator);
+
+  let debounceTimer = null;
+  function autoSave(fieldKey, val) {
+    const e = getEntry(user,todayStr());
+    e[fieldKey] = val;
+    e.savedAt = new Date().toISOString();
+    saveEntry(user,todayStr(),e);
+    indicator.textContent = '✓ Saved';
+    indicator.classList.add('saved');
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(()=>{
+      indicator.textContent = 'Changes save automatically';
+      indicator.classList.remove('saved');
+    }, 2000);
+  }
+
+  // Wire up auto-save on all inputs
+  painInput.addEventListener('input', e => autoSave('pain', e.target.value));
+  exInput.addEventListener('input', e => autoSave('exercise', e.target.value));
+  durInput.addEventListener('input', e => autoSave('exerciseDuration', e.target.value));
+  notesTA.addEventListener('input', e => autoSave('notes', e.target.value));
 
   return wrap;
 }
